@@ -1,0 +1,241 @@
+@startuml diagramme-classes
+title Satellites et balises - diagramme de classes
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam linetype ortho
+hide empty members
+
+' =====================================================
+' MODELE : le monde simule
+' =====================================================
+package "modele" {
+
+  class Simulation {
+    - tempsCourant : int
+    + tick()
+    + ajouter(e : Entite)
+    + supprimer(id : String)
+    + ajouterObservateur(o : Observateur)
+    + exporterEtat() : EtatSimulation
+    + restaurer(e : EtatSimulation)
+  }
+
+  class Position {
+    - x : double
+    - y : double
+    - z : double
+  }
+
+  abstract class Entite {
+    - id : String
+    - position : Position
+    + {abstract} mettreAJour(s : Simulation)
+  }
+
+  class Satellite {
+    - disponible : boolean
+    + estDisponible() : boolean
+    + mettreAJour(s : Simulation)
+  }
+
+  class Balise {
+    + equiper(i : Instrument)
+    + changerDeplacement(d : Deplacement)
+    + changerActivite(a : Activite)
+    + mettreAJour(s : Simulation)
+  }
+
+  class Memoire {
+    - capacite : int
+    + ajouter(m : Mesure)
+    + estPleine() : boolean
+    + vider() : List<Mesure>
+  }
+
+  class Transfert {
+    - etat : EtatTransfert
+    - progression : int
+    + avancer()
+  }
+
+  enum EtatTransfert {
+    EN_ATTENTE
+    EN_COURS
+    TERMINE
+  }
+
+  class GestionnaireCommunication {
+    + detecter(s : Simulation)
+  }
+
+  ' --- Strategy : orbites des satellites
+  interface Orbite {
+    + avancer(s : Satellite)
+  }
+  class OrbiteCirculaire
+  class Geostationnaire
+
+  ' --- Strategy : deplacements des balises
+  interface Deplacement {
+    + deplacer(b : Balise)
+  }
+  class Horizontal
+  class Vertical
+  class Sinusoidal
+  class Immobile
+  class ProfondeurFixe
+
+  ' --- State : activites des balises
+  interface Activite {
+    + agir(b : Balise)
+    + suivante(b : Balise) : Activite
+  }
+  class Collecte
+  class Remontee
+  class Transmission
+
+  ' --- Instruments et mesures (points d'extension)
+  interface Instrument {
+    + mesurer(c : Contexte) : Mesure
+  }
+  class Thermometre
+  class Salinometre
+  class Courantometre
+  class CapteurTurbidite
+
+  abstract class Mesure {
+    - instant : double
+    - lieu : Position
+  }
+  class MesureTemperature
+  class MesureSalinite
+  class MesureCourant
+  class MesureTurbidite
+}
+
+' --- relations du modele
+Simulation o-- "*" Entite
+Simulation *-- "*" Transfert
+Simulation ..> GestionnaireCommunication
+GestionnaireCommunication ..> Transfert : cree
+Entite *-- Position
+Entite <|-- Satellite
+Entite <|-- Balise
+Satellite --> "1" Orbite
+Orbite <|.. OrbiteCirculaire
+Orbite <|.. Geostationnaire
+Balise --> "1" Deplacement : strategie
+Balise --> "1" Activite : etat courant
+Balise o-- "*" Instrument
+Balise *-- "1" Memoire
+Memoire o-- "*" Mesure
+Deplacement <|.. Horizontal
+Deplacement <|.. Vertical
+Deplacement <|.. Sinusoidal
+Deplacement <|.. Immobile
+Deplacement <|.. ProfondeurFixe
+Activite <|.. Collecte
+Activite <|.. Remontee
+Activite <|.. Transmission
+Instrument <|.. Thermometre
+Instrument <|.. Salinometre
+Instrument <|.. Courantometre
+Instrument <|.. CapteurTurbidite
+Instrument ..> Mesure : produit
+Mesure <|-- MesureTemperature
+Mesure <|-- MesureSalinite
+Mesure <|-- MesureCourant
+Mesure <|-- MesureTurbidite
+Transfert --> "1" Balise
+Transfert --> "1" Satellite
+Transfert --> EtatTransfert
+
+' =====================================================
+' VUE : Observer
+' =====================================================
+package "vue" {
+  interface Observateur {
+    + miseAJour(s : Simulation)
+  }
+  class VueSimulation {
+    + dessiner()
+  }
+  interface Representation {
+    + dessiner(e : Entite)
+  }
+  class RepresentationBalise
+  class RepresentationSatellite
+}
+
+Simulation o-- "*" Observateur
+Observateur <|.. VueSimulation
+VueSimulation --> "*" Representation
+Representation <|.. RepresentationBalise
+Representation <|.. RepresentationSatellite
+
+' =====================================================
+' LANGAGE : Composite + Visitor + Factory
+' =====================================================
+package "langage" {
+  class Programme {
+    - instructions : List<Instruction>
+  }
+  interface Instruction {
+    + accepter(v : Visiteur)
+  }
+  class Creer
+  class Supprimer
+  class Configurer
+  class Equiper
+  class ChangerComportement
+  class Personnaliser
+
+  interface Visiteur {
+    + visiter(c : Creer)
+    + visiter(s : Supprimer)
+    + visiter(c : Configurer)
+    + visiter(e : Equiper)
+    + visiter(c : ChangerComportement)
+    + visiter(p : Personnaliser)
+  }
+  class Interpreteur {
+    - simulation : Simulation
+  }
+  class Registre {
+    + enregistrer(nom : String, f : Fabrique)
+    + creer(nom : String) : Object
+  }
+}
+
+Programme *-- "*" Instruction
+Instruction <|.. Creer
+Instruction <|.. Supprimer
+Instruction <|.. Configurer
+Instruction <|.. Equiper
+Instruction <|.. ChangerComportement
+Instruction <|.. Personnaliser
+Instruction ..> Visiteur : accepte
+Visiteur <|.. Interpreteur
+Interpreteur --> Simulation : pilote
+Interpreteur --> Registre : fabrique
+
+' =====================================================
+' PERSISTANCE : Memento
+' =====================================================
+package "persistance" {
+  class EtatSimulation <<memento>> {
+    - tempsCourant : int
+    - etatsEntites : List
+    - etatsTransferts : List
+  }
+  class Sauvegarde {
+    + ecrire(e : EtatSimulation, f : Fichier)
+    + lire(f : Fichier) : EtatSimulation
+  }
+}
+
+Simulation ..> EtatSimulation : produit / restaure
+Sauvegarde ..> EtatSimulation
+Sauvegarde ..> Registre : reconstruit via
+
+@enduml
