@@ -1,5 +1,5 @@
-@startuml diagramme-classes
-title Satellites et balises - diagramme de classes
+@startuml diagramme-packages
+title Satellites et balises - vue d'ensemble des packages
 skinparam classAttributeIconSize 0
 skinparam packageStyle rectangle
 skinparam linetype ortho
@@ -55,6 +55,19 @@ package "model" {
     }
   }
 
+  package "evenement" {
+    interface SimulationListener {
+    }
+    class EntiteAjouteeEvent {
+    }
+    class EntiteSupprimeeEvent {
+    }
+    class EntiteDeplaceeEvent {
+    }
+    class PasDeTempsEvent {
+    }
+  }
+
   Simulation o-- "*" Entite
   Simulation *-up- "*" Transfert
   Simulation -left-> GestionnaireCommunication
@@ -74,10 +87,22 @@ package "model" {
 }
 
 ' =====================================================
-' VUE : Observer (src/vue) - Observateur seul pour l'instant
+' EVENEMENTS (src/eventHandler, repris du TP Account)
+' =====================================================
+package "eventHandler" {
+  abstract class AbstractEvent {
+  }
+  class EventHandler {
+  }
+}
+
+' =====================================================
+' VUE : Nicellipse + ecouteurs d'evenements (src/vue)
 ' =====================================================
 package "vue" {
-  interface Observateur {
+  class VueSimulation {
+  }
+  class AffichageTemps {
   }
 }
 
@@ -107,6 +132,15 @@ Sauvegarde .down.> Registre : reconstruit via
 
 Interpreteur -up-> Simulation : pilote
 
-Simulation o-up- "*" Observateur
+Simulation *-- "1" EventHandler
+EventHandler ..> AbstractEvent : send
+AbstractEvent <|-- EntiteAjouteeEvent
+AbstractEvent <|-- EntiteSupprimeeEvent
+AbstractEvent <|-- EntiteDeplaceeEvent
+AbstractEvent <|-- PasDeTempsEvent
+SimulationListener <|.. VueSimulation
+SimulationListener <|.. AffichageTemps
+VueSimulation ..> EventHandler : registerListener
+AffichageTemps ..> EventHandler : registerListener
 
 @enduml
