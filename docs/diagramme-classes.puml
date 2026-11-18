@@ -5,10 +5,13 @@ skinparam packageStyle rectangle
 skinparam linetype ortho
 hide empty members
 
+' Monde 2D vue de cote : longitude = axe horizontal,
+' altitude = axe vertical (0 surface, < 0 sous l'eau, > 0 satellites).
+
 ' =====================================================
-' MODELE : le monde simule
+' MODELE : le monde simule (src/model)
 ' =====================================================
-package "modele" {
+package "model" {
 
   class Simulation {
     - tempsCourant : int
@@ -16,14 +19,19 @@ package "modele" {
     + ajouter(e : Entite)
     + supprimer(id : String)
     + ajouterObservateur(o : Observateur)
+    + ajouterTransfert(t : Transfert)
+    + retirerTransfert(t : Transfert)
+    + getBalises() : List<Balise>
+    + getSatellites() : List<Satellite>
     + exporterEtat() : EtatSimulation
     + restaurer(e : EtatSimulation)
   }
 
   class Position {
-    - x : double
-    - y : double
-    - z : double
+    - longitude : double
+    - altitude : double
+    + copie() : Position
+    + distanceHorizontale(p : Position) : double
   }
 
   abstract class Entite {
@@ -32,96 +40,128 @@ package "modele" {
     + {abstract} mettreAJour(s : Simulation)
   }
 
-  class Satellite {
-    - disponible : boolean
-    + estDisponible() : boolean
-    + mettreAJour(s : Simulation)
+  package "satellite" {
+    class Satellite {
+      - disponible : boolean
+      - donneesRecues : List<Mesure>
+      + estDisponible() : boolean
+      + setDisponible(d : boolean)
+      + recevoir(m : List<Mesure>)
+      + mettreAJour(s : Simulation)
+    }
+
+    ' --- Strategy : orbites des satellites
+    interface Orbite {
+      + avancer(s : Satellite)
+    }
+    class OrbiteCirculaire {
+      - circonference : double
+      - vitesse : double
+    }
+    class Geostationnaire
   }
 
-  class Balise {
-    + equiper(i : Instrument)
-    + changerDeplacement(d : Deplacement)
-    + changerActivite(a : Activite)
-    + mettreAJour(s : Simulation)
+  package "balise" {
+    class Balise {
+      + equiper(i : Instrument)
+      + desequiper(i : Instrument)
+      + changerDeplacement(d : Deplacement)
+      + changerActivite(a : Activite)
+      + creerContexte() : Contexte
+      + enAttenteDeTransmission() : boolean
+      + mettreAJour(s : Simulation)
+    }
+
+    class Memoire {
+      - capacite : int
+      + ajouter(m : Mesure)
+      + estPleine() : boolean
+      + estVide() : boolean
+      + vider() : List<Mesure>
+    }
   }
 
-  class Memoire {
-    - capacite : int
-    + ajouter(m : Mesure)
-    + estPleine() : boolean
-    + vider() : List<Mesure>
+  package "deplacement" {
+    ' --- Strategy : deplacements des balises
+    interface Deplacement {
+      + deplacer(b : Balise)
+    }
+    class Horizontal
+    class Vertical
+    class Sinusoidal
+    class Immobile
+    class ProfondeurFixe
   }
 
-  class Transfert {
-    - etat : EtatTransfert
-    - progression : int
-    + avancer()
+  package "activite" {
+    ' --- State : activites des balises
+    interface Activite {
+      + agir(b : Balise)
+      + suivante(b : Balise) : Activite
+    }
+    class Collecte
+    class Remontee
+    class Transmission
   }
 
-  enum EtatTransfert {
-    EN_ATTENTE
-    EN_COURS
-    TERMINE
+  package "instrument" {
+    ' --- Instruments (points d'extension)
+    interface Instrument {
+      + mesurer(c : Contexte) : Mesure
+    }
+    class Contexte {
+      - position : Position
+      - instant : double
+    }
+    class Thermometre
+    class Salinometre
+    class Courantometre
+    class CapteurTurbidite
   }
 
-  class GestionnaireCommunication {
-    + detecter(s : Simulation)
+  package "mesure" {
+    abstract class Mesure {
+      - instant : double
+      - lieu : Position
+    }
+    class MesureTemperature
+    class MesureSalinite
+    class MesureCourant
+    class MesureTurbidite
   }
 
-  ' --- Strategy : orbites des satellites
-  interface Orbite {
-    + avancer(s : Satellite)
-  }
-  class OrbiteCirculaire
-  class Geostationnaire
+  package "communication" {
+    class Transfert {
+      - etat : EtatTransfert
+      - progression : int
+      + avancer()
+      + interrompre()
+    }
 
-  ' --- Strategy : deplacements des balises
-  interface Deplacement {
-    + deplacer(b : Balise)
-  }
-  class Horizontal
-  class Vertical
-  class Sinusoidal
-  class Immobile
-  class ProfondeurFixe
+    enum EtatTransfert {
+      EN_ATTENTE
+      EN_COURS
+      TERMINE
+    }
 
-  ' --- State : activites des balises
-  interface Activite {
-    + agir(b : Balise)
-    + suivante(b : Balise) : Activite
+    class GestionnaireCommunication {
+      - portee : double
+      + detecter(s : Simulation)
+      + peutCommuniquer(b : Balise, s : Satellite) : boolean
+    }
   }
-  class Collecte
-  class Remontee
-  class Transmission
-
-  ' --- Instruments et mesures (points d'extension)
-  interface Instrument {
-    + mesurer(c : Contexte) : Mesure
-  }
-  class Thermometre
-  class Salinometre
-  class Courantometre
-  class CapteurTurbidite
-
-  abstract class Mesure {
-    - instant : double
-    - lieu : Position
-  }
-  class MesureTemperature
-  class MesureSalinite
-  class MesureCourant
-  class MesureTurbidite
 }
 
 ' --- relations du modele
 Simulation o-- "*" Entite
 Simulation *-- "*" Transfert
-Simulation ..> GestionnaireCommunication
+Simulation --> GestionnaireCommunication
 GestionnaireCommunication ..> Transfert : cree
 Entite *-- Position
 Entite <|-- Satellite
 Entite <|-- Balise
 Satellite --> "1" Orbite
+Satellite o-- "*" Mesure : donneesRecues
 Orbite <|.. OrbiteCirculaire
 Orbite <|.. Geostationnaire
 Balise --> "1" Deplacement : strategie
@@ -137,10 +177,14 @@ Deplacement <|.. ProfondeurFixe
 Activite <|.. Collecte
 Activite <|.. Remontee
 Activite <|.. Transmission
+Collecte ..> Remontee : suivante (memoire pleine)
+Remontee ..> Transmission : suivante (en surface)
+Transmission ..> Collecte : suivante (memoire videe)
 Instrument <|.. Thermometre
 Instrument <|.. Salinometre
 Instrument <|.. Courantometre
 Instrument <|.. CapteurTurbidite
+Instrument ..> Contexte : lit
 Instrument ..> Mesure : produit
 Mesure <|-- MesureTemperature
 Mesure <|-- MesureSalinite
@@ -151,7 +195,7 @@ Transfert --> "1" Satellite
 Transfert --> EtatTransfert
 
 ' =====================================================
-' VUE : Observer
+' VUE : Observer (src/vue) - Observateur seul pour l'instant
 ' =====================================================
 package "vue" {
   interface Observateur {
@@ -174,7 +218,7 @@ Representation <|.. RepresentationBalise
 Representation <|.. RepresentationSatellite
 
 ' =====================================================
-' LANGAGE : Composite + Visitor + Factory
+' LANGAGE : Composite + Visitor + Factory (a venir)
 ' =====================================================
 package "langage" {
   class Programme {
@@ -220,7 +264,7 @@ Interpreteur --> Simulation : pilote
 Interpreteur --> Registre : fabrique
 
 ' =====================================================
-' PERSISTANCE : Memento
+' PERSISTANCE : Memento (a venir)
 ' =====================================================
 package "persistance" {
   class EtatSimulation <<memento>> {
@@ -237,5 +281,11 @@ package "persistance" {
 Simulation ..> EtatSimulation : produit / restaure
 Sauvegarde ..> EtatSimulation
 Sauvegarde ..> Registre : reconstruit via
+
+note bottom of vue
+  Pas encore codes : VueSimulation, Representation*,
+  le package langage et le package persistance.
+  Simulation.exporterEtat() / restaurer() non plus.
+end note
 
 @enduml
