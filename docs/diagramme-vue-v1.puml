@@ -1,0 +1,84 @@
+@startuml diagramme-vue-v1
+
+title Satellites et balises - V1 : la vue (Nicellipse)
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam nodesep 40
+skinparam ranksep 50
+hide empty members
+
+' La vue ne modifie jamais le modele : elle reagit aux evenements
+' (voir diagramme-evenements-v1.puml) et se redessine.
+
+package "vue" {
+  class FenetreSimulation {
+    + ouvrir()
+  }
+
+  class VueSimulation {
+    + enregistrer(type : Class, fabrique : Function)
+    + suivre(s : Simulation)
+  }
+
+  abstract class VueEntite {
+    + synchroniser(r : Repere)
+    + dessinerDecor(g : Graphics2D, r : Repere)
+    # {abstract} dessiner(g : Graphics2D)
+  }
+  class VueSatellite
+  class VueBalise
+
+  class FondMonde {
+    + dessiner(g : Graphics2D)
+  }
+  class Repere {
+    + versEcran(p : Position) : Point
+  }
+
+  class AffichageTemps
+  class Animation {
+    + demarrer()
+    + arreter()
+  }
+}
+
+package "Nicellipse" {
+  class NiRectangle
+  class NiShape
+}
+
+package "model" {
+  class Simulation
+  class Entite
+  interface SimulationListener
+}
+
+FenetreSimulation ..> VueSimulation : cree
+FenetreSimulation ..> AffichageTemps : cree
+FenetreSimulation ..> Animation : cree
+
+VueSimulation *-- "*" VueEntite
+VueSimulation *-- "1" FondMonde
+VueSimulation --> "1" Repere
+VueEntite --> "1" Entite : represente
+VueEntite <|-- VueSatellite
+VueEntite <|-- VueBalise
+
+NiRectangle <|-- VueSimulation
+NiShape <|-- VueEntite
+
+SimulationListener <|.. VueSimulation
+SimulationListener <|.. AffichageTemps
+Animation --> "1" Simulation : tick()
+
+note right of VueSimulation
+  Reagit aux evenements :
+  entite ajoutee   -> cree sa vue
+  entite deplacee  -> replace sa vue
+  entite supprimee -> retire sa vue
+  pas de temps     -> repaint
+  Une fabrique par type d'entite
+  (Satellite -> VueSatellite...).
+end note
+
+@enduml

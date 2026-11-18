@@ -1,0 +1,76 @@
+@startuml diagramme-evenements-v1
+
+title Satellites et balises - V1 : les evenements (comme le TP Account)
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam nodesep 40
+skinparam ranksep 50
+hide empty members
+
+' La simulation envoie des evenements sans connaitre la vue.
+' Ceux qui s'interessent a un evenement s'enregistrent aupres de l'EventHandler.
+
+class Simulation {
+  + getEventHandler() : EventHandler
+}
+
+package "eventHandler" {
+  class EventHandler {
+    + registerListener(eventClass : Class, listener : Object)
+    + send(event : AbstractEvent)
+  }
+  abstract class AbstractEvent {
+    + {abstract} sendTo(target : Object)
+  }
+}
+
+package "model.evenement" {
+  interface SimulationListener {
+    + entiteAjoutee(e : EntiteAjouteeEvent)
+    + entiteSupprimee(e : EntiteSupprimeeEvent)
+    + entiteDeplacee(e : EntiteDeplaceeEvent)
+    + pasDeTempsEcoule(e : PasDeTempsEvent)
+  }
+  class EntiteAjouteeEvent {
+    - entite : Entite
+  }
+  class EntiteSupprimeeEvent {
+    - entite : Entite
+  }
+  class EntiteDeplaceeEvent {
+    - entite : Entite
+  }
+  class PasDeTempsEvent {
+    - tempsCourant : int
+  }
+}
+
+class VueSimulation
+class AffichageTemps
+
+Simulation *-- "1" EventHandler
+EventHandler ..> AbstractEvent : send
+
+AbstractEvent <|-- EntiteAjouteeEvent
+AbstractEvent <|-- EntiteSupprimeeEvent
+AbstractEvent <|-- EntiteDeplaceeEvent
+AbstractEvent <|-- PasDeTempsEvent
+
+SimulationListener <|.. VueSimulation
+SimulationListener <|.. AffichageTemps
+VueSimulation ..> EventHandler : registerListener
+AffichageTemps ..> EventHandler : registerListener
+
+note right of EventHandler
+  Double dispatch :
+  1. send(e) cherche les ecouteurs de la classe de e
+  2. e.sendTo(ecouteur) appelle la bonne methode
+  3. ecouteur.methode(e)
+end note
+
+note bottom of SimulationListener
+  Methodes par defaut vides : un ecouteur
+  ne redefinit que ce qui l'interesse.
+end note
+
+@enduml

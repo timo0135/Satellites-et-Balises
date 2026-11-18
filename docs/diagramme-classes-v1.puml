@@ -1,313 +1,80 @@
 @startuml diagramme-classes-v1
 
-title Satellites et balises - diagramme de classes V1
+title Satellites et balises - V1 : le modele
 skinparam classAttributeIconSize 0
 skinparam packageStyle rectangle
-skinparam linetype ortho
+skinparam nodesep 40
+skinparam ranksep 50
 hide empty members
 
 ' Monde 2D vue de cote : longitude = axe horizontal (circulaire),
 ' altitude = axe vertical (0 surface, < 0 sous l'eau, > 0 satellites).
-' Seuls les accesseurs utiles a la comprehension sont detailles.
+' Voir aussi : diagramme-evenements-v1.puml et diagramme-vue-v1.puml
 
-' =====================================================
-' MODELE : le monde simule (src/model)
-' =====================================================
-package "model" {
-
-  class Simulation {
-    - tempsCourant : int
-    - entites : Map<String, Entite>
-    - eventHandler : EventHandler
-    + tick()
-    + ajouter(e : Entite)
-    + supprimer(id : String)
-    + getEventHandler() : EventHandler
-    + getTempsCourant() : int
-    + getEntite(id : String) : Entite
-    + getEntites() : Collection<Entite>
-  }
-
-  class Position {
-    - longitude : double
-    - altitude : double
-    + getLongitude() : double
-    + getAltitude() : double
-    + setLongitude(l : double)
-    + setAltitude(a : double)
-  }
-
-  abstract class Entite {
-    - id : String
-    - position : Position
-    + getId() : String
-    + getPosition() : Position
-    + {abstract} mettreAJour(s : Simulation)
-  }
-
-  package "satellite" {
-    class Satellite {
-      + {static} ALTITUDE_PAR_DEFAUT : double = 200
-      - orbite : Orbite
-      + getOrbite() : Orbite
-      + setOrbite(o : Orbite)
-      + mettreAJour(s : Simulation)
-    }
-
-    ' --- Strategy : orbites des satellites
-    interface Orbite {
-      + avancer(s : Satellite)
-    }
-    class OrbiteCirculaire {
-      - circonference : double
-      - vitesse : double
-      + avancer(s : Satellite)
-    }
-    class Geostationnaire {
-      + avancer(s : Satellite)
-    }
-  }
-
-  package "balise" {
-    class Balise {
-      - deplacementActuel : Deplacement
-      + changerDeplacement(d : Deplacement)
-      + getDeplacementActuel() : Deplacement
-      + mettreAJour(s : Simulation)
-    }
-  }
-
-  package "deplacement" {
-    ' --- Strategy : deplacements des balises
-    interface Deplacement {
-      + deplacer(b : Balise)
-    }
-    class Horizontal {
-      - dx : double
-    }
-    class Vertical {
-      - vitesse : double
-      - altitudeMin : double
-      - altitudeMax : double
-      - sens : int
-    }
-    class Sinusoidal {
-      - vitesseX : double
-      - amplitude : double
-      - periode : double
-      - altitudeCentre : double
-      - pas : int
-    }
-    class ProfondeurFixe {
-      - profondeur : double
-      - vitesse : double
-    }
-    class Immobile
-  }
-
-  ' --- Evenements envoyes par la simulation
-  package "evenement" {
-    interface SimulationListener {
-      + entiteAjoutee(e : EntiteAjouteeEvent)
-      + entiteSupprimee(e : EntiteSupprimeeEvent)
-      + entiteDeplacee(e : EntiteDeplaceeEvent)
-      + pasDeTempsEcoule(e : PasDeTempsEvent)
-    }
-    class EntiteAjouteeEvent {
-      - entite : Entite
-      + getEntite() : Entite
-      + sendTo(target : Object)
-    }
-    class EntiteSupprimeeEvent {
-      - entite : Entite
-      + getEntite() : Entite
-      + sendTo(target : Object)
-    }
-    class EntiteDeplaceeEvent {
-      - entite : Entite
-      + getEntite() : Entite
-      + sendTo(target : Object)
-    }
-    class PasDeTempsEvent {
-      - tempsCourant : int
-      + getTempsCourant() : int
-      + sendTo(target : Object)
-    }
-  }
+class Simulation {
+  - tempsCourant : int
+  + tick()
+  + ajouter(e : Entite)
+  + supprimer(id : String)
+  + getEntites() : Collection<Entite>
 }
 
-' =====================================================
-' GESTION DES EVENEMENTS (src/eventHandler, repris du TP Account)
-' =====================================================
-package "eventHandler" {
-  abstract class AbstractEvent {
-    + {abstract} sendTo(target : Object)
-  }
-  class EventHandler {
-    - listeners : Map<Class<? extends AbstractEvent>, List<Object>>
-    + registerListener(eventClass : Class, listener : Object)
-    + send(event : AbstractEvent)
-  }
+abstract class Entite {
+  - id : String
+  + {abstract} mettreAJour(s : Simulation)
 }
 
-' =====================================================
-' VUE (src/vue) : Nicellipse + ecouteurs d'evenements
-' =====================================================
-package "vue" {
-  class VueSimulation {
-    - repere : Repere
-    - fond : FondMonde
-    - vues : Map<Entite, VueEntite>
-    - fabriques : Map<Class, Function>
-    + enregistrer(type : Class, fabrique : Function)
-    + suivre(s : Simulation)
-    + entiteAjoutee(e : EntiteAjouteeEvent)
-    + entiteSupprimee(e : EntiteSupprimeeEvent)
-    + entiteDeplacee(e : EntiteDeplaceeEvent)
-    + pasDeTempsEcoule(e : PasDeTempsEvent)
-    # paintComponent(g : Graphics)
-  }
-
-  abstract class VueEntite {
-    - entite : Entite
-    - ancreY : int
-    - longueurTrace : int
-    - trace : Deque<Point>
-    + getEntite() : Entite
-    + synchroniser(r : Repere)
-    + dessinerDecor(g : Graphics2D, r : Repere)
-    # {abstract} dessiner(g : Graphics2D)
-    + paintComponent(g : Graphics)
-  }
-  class VueSatellite {
-    # dessiner(g : Graphics2D)
-  }
-  class VueBalise {
-    # dessiner(g : Graphics2D)
-    + dessinerDecor(g : Graphics2D, r : Repere)
-  }
-
-  class FondMonde {
-    - image : BufferedImage
-    + dessiner(g : Graphics2D)
-  }
-  class Repere {
-    - largeurMonde : double
-    - altitudeMin : double
-    - altitudeMax : double
-    - largeurPx : int
-    - hauteurPx : int
-    + versEcran(p : Position) : Point
-    + ordonnee(altitude : double) : int
-  }
-
-  class AffichageTemps {
-    + pasDeTempsEcoule(e : PasDeTempsEvent)
-  }
-  class Animation {
-    - timer : Timer
-    + demarrer()
-    + arreter()
-    + estEnMarche() : boolean
-    + setDelai(ms : int)
-    + actionPerformed(e : ActionEvent)
-  }
-  class FenetreSimulation {
-    - espace : NiSpace
-    + ouvrir()
-  }
+class Position {
+  - longitude : double
+  - altitude : double
 }
 
-' =====================================================
-' NICELLIPSE (bibliotheque externe, src/nicellipse) et Swing
-' =====================================================
-package "nicellipse.component" {
-  class NiShape <<Nicellipse>>
-  class NiRectangle <<Nicellipse>>
-  class NiSpace <<Nicellipse>>
+' --- Satellites : Strategy sur l'orbite
+class Satellite {
+  - orbite : Orbite
 }
-class JLabel <<Swing>>
-class Timer <<Swing>>
-
-' =====================================================
-' APPLICATION (src/app)
-' =====================================================
-package "app" {
-  class Main {
-    + {static} main(args : String[])
-    ~ {static} creerSimulation() : Simulation
-  }
+interface Orbite {
+  + avancer(s : Satellite)
 }
+class OrbiteCirculaire
+class Geostationnaire
 
-' ---------- relations du modele ----------
+' --- Balises : Strategy sur le deplacement
+class Balise {
+  - deplacementActuel : Deplacement
+  + changerDeplacement(d : Deplacement)
+}
+interface Deplacement {
+  + deplacer(b : Balise)
+}
+class Horizontal
+class Vertical
+class Sinusoidal
+class ProfondeurFixe
+class Immobile
+
 Simulation o-- "*" Entite
-Simulation *-- "1" EventHandler
 Entite *-- "1" Position
 Entite <|-- Satellite
 Entite <|-- Balise
+
 Satellite --> "1" Orbite
 Orbite <|.. OrbiteCirculaire
 Orbite <|.. Geostationnaire
-Balise --> "1" Deplacement : strategie
+
+Balise --> "1" Deplacement
 Deplacement <|.. Horizontal
 Deplacement <|.. Vertical
 Deplacement <|.. Sinusoidal
 Deplacement <|.. ProfondeurFixe
 Deplacement <|.. Immobile
 
-' ---------- relations des evenements ----------
-AbstractEvent <|-- EntiteAjouteeEvent
-AbstractEvent <|-- EntiteSupprimeeEvent
-AbstractEvent <|-- EntiteDeplaceeEvent
-AbstractEvent <|-- PasDeTempsEvent
-EventHandler ..> AbstractEvent : send
-EventHandler o-- "*" SimulationListener : ecouteurs
-Simulation ..> AbstractEvent : cree et envoie
-EntiteAjouteeEvent ..> SimulationListener : sendTo
-EntiteSupprimeeEvent ..> SimulationListener : sendTo
-EntiteDeplaceeEvent ..> SimulationListener : sendTo
-PasDeTempsEvent ..> SimulationListener : sendTo
-EntiteAjouteeEvent --> Entite
-EntiteSupprimeeEvent --> Entite
-EntiteDeplaceeEvent --> Entite
-
-' ---------- relations de la vue ----------
-SimulationListener <|.. VueSimulation
-SimulationListener <|.. AffichageTemps
-VueSimulation ..> EventHandler : registerListener
-AffichageTemps ..> EventHandler : registerListener
-VueSimulation *-- "1" FondMonde
-VueSimulation --> "1" Repere
-VueSimulation *-- "*" VueEntite
-VueEntite --> "1" Entite : represente
-VueEntite --> Repere : synchroniser
-VueEntite <|-- VueSatellite
-VueEntite <|-- VueBalise
-VueSatellite ..> Satellite
-VueBalise ..> Balise
-FondMonde --> "1" Repere
-Animation --> "1" Simulation : tick
-Animation *-- "1" Timer
-FenetreSimulation ..> VueSimulation : cree
-FenetreSimulation ..> Animation : cree
-FenetreSimulation ..> AffichageTemps : cree
-FenetreSimulation --> NiSpace
-Main ..> Simulation : cree
-Main ..> FenetreSimulation : ouvre
-
-' ---------- heritage Nicellipse / Swing ----------
-NiShape <|-- VueEntite
-NiRectangle <|-- VueSimulation
-JLabel <|-- AffichageTemps
-
-note right of EventHandler
-  Double dispatch (comme le TP Account) :
-  send(e) -> e.sendTo(ecouteur)
-  -> ecouteur.methode(e)
+note bottom of Orbite
+  Strategy : un satellite delegue son mouvement a son orbite.
 end note
 
 note bottom of Deplacement
-  Strategy : la balise delegue son mouvement,
+  Strategy : une balise delegue son mouvement,
   on peut en changer a tout moment.
 end note
 
