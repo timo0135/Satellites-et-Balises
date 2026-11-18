@@ -1,12 +1,12 @@
 package vue;
 
-import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Function;
-
-import javax.swing.BorderFactory;
 
 import eventHandler.EventHandler;
 import model.Entite;
@@ -19,8 +19,11 @@ import model.evenement.SimulationListener;
 import nicellipse.component.NiRectangle;
 
 /**
- * Vue de la simulation : un rectangle Nicellipse (ciel) contenant la mer et
- * une {@link VueEntite} par entite.
+ * Vue de la simulation : un rectangle Nicellipse dont le fond est un decor
+ * ({@link FondMonde}) et qui contient une {@link VueEntite} par entite.
+ * <p>
+ * Ordre de dessin : le decor, puis le decor propre a chaque entite (traines,
+ * traits de profondeur), puis les entites elles-memes par-dessus.
  * <p>
  * C'est un {@link SimulationListener} : elle reagit aux evenements de la
  * simulation. Une entite ajoutee cree sa vue, une entite deplacee replace la
@@ -35,21 +38,15 @@ public class VueSimulation extends NiRectangle implements SimulationListener {
     private static final long serialVersionUID = 1L;
 
     private final transient Repere repere;
+    private final transient FondMonde fond;
     private final transient Map<Entite, VueEntite> vues = new LinkedHashMap<>();
     private final transient Map<Class<? extends Entite>, Function<Entite, VueEntite>> fabriques =
             new HashMap<>();
 
     public VueSimulation(Repere repere) {
         this.repere = repere;
+        this.fond = new FondMonde(repere);
         this.setBounds(0, 0, repere.getLargeurPx(), repere.getHauteurPx());
-        this.setBackground(new Color(0xE6F1FB));
-
-        int niveauMer = repere.ordonnee(0);
-        NiRectangle mer = new NiRectangle();
-        mer.setBorder(BorderFactory.createEmptyBorder());
-        mer.setBackground(new Color(0x85B7EB));
-        mer.setBounds(0, niveauMer, repere.getLargeurPx(), repere.getHauteurPx() - niveauMer);
-        this.add(mer);
     }
 
     /** Declare quelle vue utiliser pour un type d'entite. */
@@ -72,6 +69,18 @@ public class VueSimulation extends NiRectangle implements SimulationListener {
         eventHandler.registerListener(EntiteSupprimeeEvent.class, this);
         eventHandler.registerListener(EntiteDeplaceeEvent.class, this);
         eventHandler.registerListener(PasDeTempsEvent.class, this);
+    }
+
+    @Override
+    protected void paintComponent(Graphics graphics) {
+        super.paintComponent(graphics);
+        Graphics2D g = (Graphics2D) graphics.create();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        fond.dessiner(g);
+        for (VueEntite vue : vues.values()) {
+            vue.dessinerDecor(g, repere);
+        }
+        g.dispose();
     }
 
     @Override
@@ -109,7 +118,7 @@ public class VueSimulation extends NiRectangle implements SimulationListener {
         VueEntite vue = fabrique.apply(entite);
         vue.synchroniser(repere);
         vues.put(entite, vue);
-        this.add(vue, 0); // index 0 : peint au-dessus de la mer
+        this.add(vue, 0); // index 0 : peint au-dessus du decor
         this.repaint();
     }
 }

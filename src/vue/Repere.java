@@ -45,6 +45,14 @@ public class Repere {
         return (int) Math.round((altitudeMax - altitude) / (altitudeMax - altitudeMin) * hauteurPx);
     }
 
+    public double getAltitudeMin() {
+        return altitudeMin;
+    }
+
+    public double getAltitudeMax() {
+        return altitudeMax;
+    }
+
     public double getLargeurMonde() {
         return largeurMonde;
     }
