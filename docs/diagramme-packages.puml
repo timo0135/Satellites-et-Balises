@@ -1,0 +1,112 @@
+@startuml diagramme-classes
+title Satellites et balises - diagramme de classes
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam linetype ortho
+hide empty members
+
+' Monde 2D vue de cote : longitude = axe horizontal,
+' altitude = axe vertical (0 surface, < 0 sous l'eau, > 0 satellites).
+
+' =====================================================
+' MODELE : le monde simule (src/model)
+' =====================================================
+package "model" {
+
+  class Simulation {
+  }
+
+  package "satellite" {
+    class Satellite {
+    }
+  }
+
+  package "balise" {
+    class Balise {
+    }
+    class Memoire {
+    }
+  }
+
+  package "deplacement" {
+    interface Deplacement {
+    }
+  }
+
+  package "activite" {
+    interface Activite {
+    }
+  }
+
+  package "instrument" {
+    interface Instrument {
+    }
+  }
+
+  package "mesure" {
+    abstract class Mesure {
+    }
+  }
+
+  package "communication" {
+    class Transfert {
+    }
+    class GestionnaireCommunication {
+    }
+  }
+
+  Simulation o-- "*" Entite
+  Simulation *-up- "*" Transfert
+  Simulation -left-> GestionnaireCommunication
+  Transfert --> "1" balise
+  Transfert --> "1" satellite
+  GestionnaireCommunication .left.> Transfert : cree
+  Entite *-up- Position
+  Entite <|-right- satellite
+  Entite <|-down- balise
+  balise --> "1" deplacement : strategie
+  balise --> "1" activite : etat courant
+  balise o-- "*" instrument
+  Balise *-right- "1" Memoire
+  Memoire o-left- "*" mesure
+  instrument .up.> mesure : produit
+
+}
+
+' =====================================================
+' VUE : Observer (src/vue) - Observateur seul pour l'instant
+' =====================================================
+package "vue" {
+  interface Observateur {
+  }
+}
+
+' =====================================================
+' LANGAGE : Composite + Visitor + Factory (a venir)
+' =====================================================
+package "langage" {
+  class Registre {
+  }
+  class Interpreteur {
+  }
+}
+
+' =====================================================
+' PERSISTANCE : Memento (a venir)
+' =====================================================
+package "persistance" {
+  class EtatSimulation <<memento>> {
+  }
+  class Sauvegarde {
+  }
+}
+
+Simulation .down.> EtatSimulation : produit / restaure
+Sauvegarde .up.> EtatSimulation
+Sauvegarde .down.> Registre : reconstruit via
+
+Interpreteur -up-> Simulation : pilote
+
+Simulation o-up- "*" Observateur
+
+@enduml

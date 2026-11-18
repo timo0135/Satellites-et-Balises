@@ -1,0 +1,124 @@
+@startuml diagramme-classes
+
+title Satellites et balises - diagramme de classes V1
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam linetype ortho
+hide empty members
+
+' Monde 2D vue de cote : longitude = axe horizontal,
+' altitude = axe vertical (0 surface, < 0 sous l'eau, > 0 satellites).
+
+' =====================================================
+' MODELE : le monde simule (src/model)
+' =====================================================
+package "model" {
+
+  class Simulation {
+    - tempsCourant : int
+    + tick()
+    + ajouter(e : Entite)
+    + supprimer(id : String)
+    + ajouterObservateur(o : Observateur)
+    + getEntites() : List<Entite>
+  }
+
+  class Position {
+    - longitude : double
+    - altitude : double
+    + copie() : Position
+  }
+
+  abstract class Entite {
+    - id : String
+    - position : Position
+    + {abstract} mettreAJour(s : Simulation)
+  }
+
+  package "satellite" {
+    class Satellite {
+      - disponible : boolean
+      + estDisponible() : boolean
+      + setDisponible(d : boolean)
+      + mettreAJour(s : Simulation)
+    }
+
+    ' --- Strategy : orbites des satellites
+    interface Orbite {
+      + avancer(s : Satellite)
+    }
+    class OrbiteCirculaire {
+      - circonference : double
+      - vitesse : double
+    }
+    class Geostationnaire
+  }
+
+  package "balise" {
+    class Balise {
+      + equiper(i : Instrument)
+      + desequiper(i : Instrument)
+      + changerDeplacement(d : Deplacement)
+      + changerActivite(a : Activite)
+      + creerContexte() : Contexte
+      + enAttenteDeTransmission() : boolean
+      + mettreAJour(s : Simulation)
+    }
+
+  }
+
+  package "deplacement" {
+    ' --- Strategy : deplacements des balises
+    interface Deplacement {
+      + deplacer(b : Balise)
+    }
+    class Horizontal
+    class Vertical
+    class Sinusoidal
+    class Immobile
+    class ProfondeurFixe
+  }
+
+}
+
+' --- relations du modele
+Simulation o-- "*" Entite
+Entite *-- Position
+Entite <|-- Satellite
+Entite <|-- Balise
+Satellite --> "1" Orbite
+Orbite <|.. OrbiteCirculaire
+Orbite <|.. Geostationnaire
+Balise --> "1" Deplacement : strategie
+Deplacement <|.. Horizontal
+Deplacement <|.. Vertical
+Deplacement <|.. Sinusoidal
+Deplacement <|.. Immobile
+Deplacement <|.. ProfondeurFixe
+
+' =====================================================
+' VUE : Observer (src/vue) - Observateur seul pour l'instant
+' =====================================================
+package "vue" {
+  interface Observateur {
+    + miseAJour(s : Simulation)
+  }
+  class VueSimulation {
+    + dessiner()
+  }
+  interface Representation {
+    + dessiner(e : Entite)
+  }
+  class RepresentationBalise
+  class RepresentationSatellite
+}
+
+Simulation o-- "*" Observateur
+Observateur <|.. VueSimulation
+VueSimulation --> "*" Representation
+Representation <|.. RepresentationBalise
+Representation <|.. RepresentationSatellite
+
+
+
+@enduml
