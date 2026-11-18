@@ -2,29 +2,36 @@ package vue;
 
 import java.awt.Color;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Function;
 
 import javax.swing.BorderFactory;
 
+import eventHandler.EventHandler;
 import model.Entite;
 import model.Simulation;
+import model.evenement.EntiteAjouteeEvent;
+import model.evenement.EntiteDeplaceeEvent;
+import model.evenement.EntiteSupprimeeEvent;
+import model.evenement.PasDeTempsEvent;
+import model.evenement.SimulationListener;
 import nicellipse.component.NiRectangle;
 
 /**
  * Vue de la simulation : un rectangle Nicellipse (ciel) contenant la mer et
  * une {@link VueEntite} par entite.
  * <p>
- * Patron Observer : elle est prevenue apres chaque pas de temps et
- * synchronise ses vues avec le modele (creation, deplacement, suppression).
+ * C'est un {@link SimulationListener} : elle reagit aux evenements de la
+ * simulation. Une entite ajoutee cree sa vue, une entite deplacee replace la
+ * sienne, une entite supprimee retire la sienne, et chaque pas de temps
+ * declenche un seul rafraichissement.
  * <p>
  * Le choix de la vue d'une entite passe par un registre type -&gt; fabrique :
  * ajouter un nouveau type d'entite revient a enregistrer sa vue, sans
  * modifier cette classe.
  */
-public class VueSimulation extends NiRectangle implements Observateur {
+public class VueSimulation extends NiRectangle implements SimulationListener {
     private static final long serialVersionUID = 1L;
 
     private final transient Repere repere;
@@ -51,33 +58,58 @@ public class VueSimulation extends NiRectangle implements Observateur {
         fabriques.put(type, entite -> fabrique.apply(type.cast(entite)));
     }
 
-    @Override
-    public void miseAJour(Simulation simulation) {
-        Iterator<Map.Entry<Entite, VueEntite>> it = vues.entrySet().iterator();
-        while (it.hasNext()) {
-            Map.Entry<Entite, VueEntite> e = it.next();
-            if (!simulation.getEntites().contains(e.getKey())) {
-                this.remove(e.getValue());
-                it.remove();
-            }
-        }
+    /**
+     * Commence a suivre une simulation : affiche les entites deja presentes
+     * (les evenements passes ne sont pas rejoues), puis s'enregistre aupres
+     * de son gestionnaire d'evenements.
+     */
+    public void suivre(Simulation simulation) {
         for (Entite entite : simulation.getEntites()) {
-            VueEntite vue = vues.get(entite);
-            if (vue == null) {
-                vue = creerVue(entite);
-                if (vue == null) {
-                    continue;
-                }
-                vues.put(entite, vue);
-                this.add(vue, 0); // index 0 : peint au-dessus de la mer
-            }
+            ajouterVue(entite);
+        }
+        EventHandler eventHandler = simulation.getEventHandler();
+        eventHandler.registerListener(EntiteAjouteeEvent.class, this);
+        eventHandler.registerListener(EntiteSupprimeeEvent.class, this);
+        eventHandler.registerListener(EntiteDeplaceeEvent.class, this);
+        eventHandler.registerListener(PasDeTempsEvent.class, this);
+    }
+
+    @Override
+    public void entiteAjoutee(EntiteAjouteeEvent e) {
+        ajouterVue(e.getEntite());
+    }
+
+    @Override
+    public void entiteSupprimee(EntiteSupprimeeEvent e) {
+        VueEntite vue = vues.remove(e.getEntite());
+        if (vue != null) {
+            this.remove(vue);
+            this.repaint();
+        }
+    }
+
+    @Override
+    public void entiteDeplacee(EntiteDeplaceeEvent e) {
+        VueEntite vue = vues.get(e.getEntite());
+        if (vue != null) {
             vue.synchroniser(repere);
         }
+    }
+
+    @Override
+    public void pasDeTempsEcoule(PasDeTempsEvent e) {
         this.repaint();
     }
 
-    private VueEntite creerVue(Entite entite) {
+    private void ajouterVue(Entite entite) {
         Function<Entite, VueEntite> fabrique = fabriques.get(entite.getClass());
-        return fabrique == null ? null : fabrique.apply(entite);
+        if (fabrique == null) {
+            return; // type d'entite sans representation : on l'ignore
+        }
+        VueEntite vue = fabrique.apply(entite);
+        vue.synchroniser(repere);
+        vues.put(entite, vue);
+        this.add(vue, 0); // index 0 : peint au-dessus de la mer
+        this.repaint();
     }
 }

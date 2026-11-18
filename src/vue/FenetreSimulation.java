@@ -27,13 +27,11 @@ public class FenetreSimulation {
         vue.enregistrer(Satellite.class, VueSatellite::new);
         vue.enregistrer(Balise.class, VueBalise::new);
         vue.setLocation(0, HAUTEUR_BARRE);
-        simulation.ajouterObservateur(vue);
-        vue.miseAJour(simulation); // premier affichage, avant le premier pas
+        vue.suivre(simulation);
 
         Animation animation = new Animation(simulation, 1000 / IMAGES_PAR_SECONDE_INITIALES);
 
-        JLabel temps = new JLabel("t = " + simulation.getTempsCourant());
-        simulation.ajouterObservateur(s -> temps.setText("t = " + s.getTempsCourant()));
+        AffichageTemps temps = new AffichageTemps(simulation);
 
         JButton lecture = new JButton("Pause");
         lecture.addActionListener(e -> {
