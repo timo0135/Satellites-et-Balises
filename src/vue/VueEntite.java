@@ -12,6 +12,8 @@ import java.awt.RenderingHints;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
+import javax.swing.ToolTipManager;
+
 import model.Entite;
 import nicellipse.component.NiShape;
 
@@ -56,7 +58,8 @@ public abstract class VueEntite extends NiShape {
         this.ancreY = ancreY;
         this.longueurTrace = longueurTrace;
         this.couleurTrace = couleurTrace;
-        this.setToolTipText(entite.getId());
+        // pas de setToolTipText : le texte est calcule a la demande (getToolTipText)
+        ToolTipManager.sharedInstance().registerComponent(this);
     }
 
     public Entite getEntite() {
@@ -73,9 +76,20 @@ public abstract class VueEntite extends NiShape {
                 trace.removeFirst();
             }
         }
-        this.setToolTipText(String.format("%s  (longitude %.0f, altitude %.0f)",
-                entite.getId(), entite.getPosition().getLongitude(),
-                entite.getPosition().getAltitude()));
+    }
+
+    /**
+     * Texte de l'infobulle, calcule au moment ou la souris survole la vue (et
+     * non a chaque deplacement) pour toujours refleter l'etat courant.
+     */
+    protected String infobulle() {
+        return String.format("%s  (longitude %.0f, altitude %.0f)", entite.getId(),
+                entite.getPosition().getLongitude(), entite.getPosition().getAltitude());
+    }
+
+    @Override
+    public String getToolTipText() {
+        return infobulle();
     }
 
     /**

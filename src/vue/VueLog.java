@@ -14,9 +14,11 @@ import javax.swing.text.BadLocationException;
 import eventHandler.EventHandler;
 import model.Entite;
 import model.Simulation;
+import model.evenement.ActiviteChangeeEvent;
 import model.evenement.EntiteAjouteeEvent;
 import model.evenement.EntiteDeplaceeEvent;
 import model.evenement.EntiteSupprimeeEvent;
+import model.evenement.MesureEffectueeEvent;
 import model.evenement.PasDeTempsEvent;
 import model.evenement.SimulationListener;
 import nicellipse.component.NiRectangle;
@@ -32,6 +34,8 @@ import nicellipse.component.NiRectangle;
  * + S1 (Satellite) en (0, 220)     entite ajoutee (ou presente au demarrage)
  * - B4 (Balise)                    entite supprimee
  * &gt; S1 en (3, 220)                entite deplacee
+ * ~ B1 Temperature 12.30 C (t=10)  mesure effectuee par une balise
+ * * B1 : Collecte -&gt; Remontee      changement d'activite
  * -- t=12 --                       fin du pas de temps 12
  * </pre>
  * Des cases a cocher filtrent les types d'evenements, et le journal garde
@@ -41,11 +45,13 @@ public class VueLog extends NiRectangle implements SimulationListener {
     private static final long serialVersionUID = 1L;
 
     private static final int MAX_LIGNES = 500;
-    private static final int HAUTEUR_COMMANDES = 60;
+    private static final int HAUTEUR_COMMANDES = 84;
 
     private final JTextArea texte = new JTextArea();
     private final JCheckBox entites = new JCheckBox("Entités", true);
     private final JCheckBox deplacements = new JCheckBox("Déplacements", true);
+    private final JCheckBox mesures = new JCheckBox("Mesures", true);
+    private final JCheckBox activites = new JCheckBox("Activités", true);
     private final JCheckBox pas = new JCheckBox("Pas de temps", true);
 
     public VueLog(int largeur, int hauteur) {
@@ -57,6 +63,8 @@ public class VueLog extends NiRectangle implements SimulationListener {
         JPanel commandes = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 2));
         commandes.add(entites);
         commandes.add(deplacements);
+        commandes.add(mesures);
+        commandes.add(activites);
         commandes.add(pas);
         commandes.add(vider);
         commandes.setBounds(0, 0, largeur, HAUTEUR_COMMANDES);
@@ -85,6 +93,8 @@ public class VueLog extends NiRectangle implements SimulationListener {
         eventHandler.registerListener(EntiteAjouteeEvent.class, this);
         eventHandler.registerListener(EntiteSupprimeeEvent.class, this);
         eventHandler.registerListener(EntiteDeplaceeEvent.class, this);
+        eventHandler.registerListener(MesureEffectueeEvent.class, this);
+        eventHandler.registerListener(ActiviteChangeeEvent.class, this);
         eventHandler.registerListener(PasDeTempsEvent.class, this);
     }
 
@@ -106,6 +116,22 @@ public class VueLog extends NiRectangle implements SimulationListener {
     public void entiteDeplacee(EntiteDeplaceeEvent e) {
         if (deplacements.isSelected()) {
             ecrire("> " + e.getEntite().getId() + " en " + position(e.getEntite()));
+        }
+    }
+
+    @Override
+    public void mesureEffectuee(MesureEffectueeEvent e) {
+        if (mesures.isSelected()) {
+            ecrire("~ " + e.getBalise().getId() + " " + e.getMesure());
+        }
+    }
+
+    @Override
+    public void activiteChangee(ActiviteChangeeEvent e) {
+        if (activites.isSelected()) {
+            ecrire("* " + e.getBalise().getId() + " : "
+                    + e.getAncienne().getClass().getSimpleName() + " -> "
+                    + e.getNouvelle().getClass().getSimpleName());
         }
     }
 

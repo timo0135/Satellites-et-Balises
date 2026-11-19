@@ -1,0 +1,122 @@
+@startuml diagramme-classes-v2
+
+title Satellites et balises - V2 : instruments, mesures, memoire, activites
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam nodesep 40
+skinparam ranksep 50
+hide empty members
+
+' La v2 enrichit la balise. Le reste du modele (Simulation, Entite, Satellite,
+' deplacements...) est inchange : voir diagramme-classes-v1.puml.
+' La transmission et la communication arrivent en v3.
+
+abstract class Entite
+class Simulation
+
+class Balise {
+  - instantCourant : double
+  + equiper(i : Instrument)
+  + desequiper(i : Instrument)
+  + changerDeplacement(d : Deplacement)
+  + changerActivite(a : Activite)
+  + creerContexte() : Contexte
+  + mettreAJour(s : Simulation)
+}
+
+interface Deplacement
+
+class Memoire {
+  - capacite : int
+  + ajouter(m : Mesure)
+  + estPleine() : boolean
+  + estVide() : boolean
+  + vider() : List<Mesure>
+  + taille() : int
+}
+
+' --- State : activites de la balise
+interface Activite {
+  + agir(b : Balise)
+  + suivante(b : Balise) : Activite
+}
+class Collecte {
+  - periode : int
+  - pas : int
+}
+class Remontee {
+  - vitesse : double
+}
+
+' --- Points d'extension : instruments et mesures
+interface Instrument {
+  + mesurer(c : Contexte) : Mesure
+}
+class Thermometre
+class Salinometre
+class Courantometre
+class CapteurTurbidite
+class Contexte {
+  - position : Position
+  - instant : double
+}
+
+abstract class Mesure {
+  - instant : double
+  - lieu : Position
+}
+class MesureTemperature
+class MesureSalinite
+class MesureCourant
+class MesureTurbidite
+
+' --- Evenements nouveaux (envoyes par la balise via la simulation)
+class MesureEffectueeEvent {
+  - balise : Balise
+  - mesure : Mesure
+}
+class ActiviteChangeeEvent {
+  - balise : Balise
+  - ancienne : Activite
+  - nouvelle : Activite
+}
+
+Entite <|-- Balise
+Balise --> "1" Deplacement : strategie
+Balise --> "1" Activite : etat courant
+Balise o-- "*" Instrument
+Balise *-- "1" Memoire
+Memoire o-- "*" Mesure
+
+Activite <|.. Collecte
+Activite <|.. Remontee
+Collecte ..> Remontee : memoire pleine
+
+Instrument <|.. Thermometre
+Instrument <|.. Salinometre
+Instrument <|.. Courantometre
+Instrument <|.. CapteurTurbidite
+Instrument ..> Contexte : lit
+Instrument ..> Mesure : produit
+
+Mesure <|-- MesureTemperature
+Mesure <|-- MesureSalinite
+Mesure <|-- MesureCourant
+Mesure <|-- MesureTurbidite
+
+Balise ..> MesureEffectueeEvent : envoie
+Balise ..> ActiviteChangeeEvent : envoie
+Simulation ..> Balise : tick -> mettreAJour
+
+note bottom of Activite
+  State : la balise delegue son comportement.
+  Collecte -> Remontee quand la memoire est pleine ;
+  en surface, la balise attend la transmission (v3).
+end note
+
+note bottom of Instrument
+  Extension : un nouveau type de mesure =
+  une sous-classe de Mesure + un Instrument.
+end note
+
+@enduml

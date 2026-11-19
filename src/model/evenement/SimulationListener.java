@@ -14,4 +14,8 @@ public interface SimulationListener {
 	default void entiteDeplacee(EntiteDeplaceeEvent e) {}
 
 	default void pasDeTempsEcoule(PasDeTempsEvent e) {}
+
+	default void mesureEffectuee(MesureEffectueeEvent e) {}
+
+	default void activiteChangee(ActiviteChangeeEvent e) {}
 }
