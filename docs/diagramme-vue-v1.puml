@@ -39,6 +39,10 @@ package "vue" {
     + demarrer()
     + arreter()
   }
+
+  class VueLog {
+    + suivre(s : Simulation)
+  }
 }
 
 package "Nicellipse" {
@@ -54,6 +58,7 @@ package "model" {
 
 FenetreSimulation ..> VueSimulation : cree
 FenetreSimulation ..> Animation : cree
+FenetreSimulation ..> VueLog : cree
 
 VueSimulation *-- "*" VueEntite
 VueSimulation *-- "1" FondMonde
@@ -63,9 +68,11 @@ VueEntite <|-- VueSatellite
 VueEntite <|-- VueBalise
 
 NiRectangle <|-- VueSimulation
+NiRectangle <|-- VueLog
 NiShape <|-- VueEntite
 
 SimulationListener <|.. VueSimulation
+SimulationListener <|.. VueLog
 Animation --> "1" Simulation : tick()
 
 note right of VueSimulation

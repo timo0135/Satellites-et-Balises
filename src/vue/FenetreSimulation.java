@@ -13,11 +13,12 @@ import model.satellite.Satellite;
 import nicellipse.component.NiSpace;
 
 /**
- * Fenetre principale : la vue de la simulation, une barre de commandes
- * (pause/lecture, vitesse).
+ * Fenetre principale : la vue graphique de la simulation, une barre de
+ * commandes (pause/lecture, vitesse) et, a droite, le journal des evenements.
  */
 public class FenetreSimulation {
     private static final int HAUTEUR_BARRE = 40;
+    private static final int LARGEUR_LOG = 320;
     private static final int IMAGES_PAR_SECONDE_INITIALES = 20;
 
     private final NiSpace espace;
@@ -28,6 +29,11 @@ public class FenetreSimulation {
         vue.enregistrer(Balise.class, VueBalise::new);
         vue.setLocation(0, HAUTEUR_BARRE);
         vue.suivre(simulation);
+
+        int hauteurTotale = repere.getHauteurPx() + HAUTEUR_BARRE;
+        VueLog log = new VueLog(LARGEUR_LOG, hauteurTotale);
+        log.setLocation(repere.getLargeurPx(), 0);
+        log.suivre(simulation);
 
         Animation animation = new Animation(simulation, 1000 / IMAGES_PAR_SECONDE_INITIALES);
 
@@ -52,9 +58,10 @@ public class FenetreSimulation {
         barre.setBounds(0, 0, repere.getLargeurPx(), HAUTEUR_BARRE);
 
         espace = new NiSpace("Satellites et balises",
-                new Dimension(repere.getLargeurPx(), repere.getHauteurPx() + HAUTEUR_BARRE));
+                new Dimension(repere.getLargeurPx() + LARGEUR_LOG, hauteurTotale));
         espace.add(barre);
         espace.add(vue);
+        espace.add(log);
 
         animation.demarrer();
     }

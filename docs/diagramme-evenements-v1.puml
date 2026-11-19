@@ -46,6 +46,7 @@ package "model.evenement" {
 }
 
 class VueSimulation
+class VueLog
 
 Simulation *-- "1" EventHandler
 EventHandler ..> AbstractEvent : send
@@ -56,7 +57,9 @@ AbstractEvent <|-- EntiteDeplaceeEvent
 AbstractEvent <|-- PasDeTempsEvent
 
 SimulationListener <|.. VueSimulation
+SimulationListener <|.. VueLog
 VueSimulation ..> EventHandler : registerListener
+VueLog ..> EventHandler : registerListener
 
 note right of EventHandler
   Double dispatch :
