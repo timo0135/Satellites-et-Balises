@@ -14,7 +14,7 @@ import nicellipse.component.NiSpace;
 
 /**
  * Fenetre principale : la vue de la simulation, une barre de commandes
- * (pause/lecture, vitesse) et l'affichage du temps.
+ * (pause/lecture, vitesse).
  */
 public class FenetreSimulation {
     private static final int HAUTEUR_BARRE = 40;
@@ -30,8 +30,6 @@ public class FenetreSimulation {
         vue.suivre(simulation);
 
         Animation animation = new Animation(simulation, 1000 / IMAGES_PAR_SECONDE_INITIALES);
-
-        AffichageTemps temps = new AffichageTemps(simulation);
 
         JButton lecture = new JButton("Pause");
         lecture.addActionListener(e -> {
@@ -51,7 +49,6 @@ public class FenetreSimulation {
         barre.add(lecture);
         barre.add(new JLabel("Vitesse :"));
         barre.add(vitesse);
-        barre.add(temps);
         barre.setBounds(0, 0, repere.getLargeurPx(), HAUTEUR_BARRE);
 
         espace = new NiSpace("Satellites et balises",

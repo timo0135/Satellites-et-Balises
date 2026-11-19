@@ -35,7 +35,6 @@ package "vue" {
     + versEcran(p : Position) : Point
   }
 
-  class AffichageTemps
   class Animation {
     + demarrer()
     + arreter()
@@ -54,7 +53,6 @@ package "model" {
 }
 
 FenetreSimulation ..> VueSimulation : cree
-FenetreSimulation ..> AffichageTemps : cree
 FenetreSimulation ..> Animation : cree
 
 VueSimulation *-- "*" VueEntite
@@ -68,7 +66,6 @@ NiRectangle <|-- VueSimulation
 NiShape <|-- VueEntite
 
 SimulationListener <|.. VueSimulation
-SimulationListener <|.. AffichageTemps
 Animation --> "1" Simulation : tick()
 
 note right of VueSimulation

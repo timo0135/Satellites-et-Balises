@@ -102,8 +102,6 @@ package "eventHandler" {
 package "vue" {
   class VueSimulation {
   }
-  class AffichageTemps {
-  }
 }
 
 ' =====================================================
@@ -139,8 +137,6 @@ AbstractEvent <|-- EntiteSupprimeeEvent
 AbstractEvent <|-- EntiteDeplaceeEvent
 AbstractEvent <|-- PasDeTempsEvent
 SimulationListener <|.. VueSimulation
-SimulationListener <|.. AffichageTemps
 VueSimulation ..> EventHandler : registerListener
-AffichageTemps ..> EventHandler : registerListener
 
 @enduml
